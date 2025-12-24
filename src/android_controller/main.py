@@ -1,4 +1,4 @@
-"""Typer CLI application for android-use."""
+"""Typer CLI application for opdroid."""
 
 import os
 from typing import Optional
@@ -17,7 +17,7 @@ load_dotenv()
 
 # Create Typer app
 app = typer.Typer(
-    name="android-use",
+    name="opdroid",
     help="🤖 LLM-controlled Android device automation via ADB",
     add_completion=False,
     rich_markup_mode="rich"
@@ -43,6 +43,11 @@ def main(
         50,
         "--max-iterations", "-n",
         help="Maximum number of observe-think-act cycles"
+    ),
+    max_images: int = typer.Option(
+        5,
+        "--max-images", "-i",
+        help="Maximum number of images to keep in context history"
     )
 ):
     """🤖 LLM-controlled Android device automation via ADB.
@@ -56,19 +61,11 @@ def main(
     resolved_model = _resolve_model(model)
 
     console.print(Panel.fit(
-        "[bold blue]🤖 Android-Use (Interactive Mode)[/bold blue]\n"
+        "[bold blue]🤖 opdroid (Interactive Mode)[/bold blue]\n"
         f"[dim]Model: {resolved_model}[/dim]\n"
         "[dim]Type 'exit' or 'quit' to end session.[/dim]",
         border_style="blue"
     ))
-
-    # Check for API key
-    if not (os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY") or os.getenv("GROQ_API_KEY")):
-        console.print(
-            "[bold red]❌ No API key found![/bold red]\n"
-            "Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or GROQ_API_KEY in your environment or .env file."
-        )
-        raise typer.Exit(1)
 
     try:
         console.print("[yellow]📱 Connecting to device...[/yellow]")
@@ -82,6 +79,7 @@ def main(
             controller=controller,
             model=resolved_model,
             max_iterations=max_iterations,
+            max_images=max_images,
             console=console
         )
 
@@ -136,6 +134,11 @@ def run(
         50,
         "--max-iterations", "-n",
         help="Maximum number of observe-think-act cycles"
+    ),
+    max_images: int = typer.Option(
+        5,
+        "--max-images", "-i",
+        help="Maximum number of images to keep in context history"
     )
 ) -> None:
     """Run a single objective without interactive mode."""
@@ -147,6 +150,7 @@ def run(
             controller=controller,
             model=resolved_model,
             max_iterations=max_iterations,
+            max_images=max_images,
             console=console
         )
         agent.run(objective)
@@ -205,10 +209,6 @@ def _resolve_model(model: Optional[str]) -> str:
     env_model = os.getenv("MODEL")
     if env_model:
         return env_model
-        
-    # Default for Groq-only environment
-    if os.getenv("GROQ_API_KEY") and not os.getenv("OPENAI_API_KEY") and not os.getenv("ANTHROPIC_API_KEY"):
-        return "groq/llama-3.2-90b-vision-preview"
         
     return "gpt-4o"
 

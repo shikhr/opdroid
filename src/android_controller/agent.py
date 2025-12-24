@@ -64,6 +64,7 @@ class Agent:
         controller: AndroidController,
         model: str = "gpt-4o",
         max_iterations: int = 50,
+        max_images: int = 5,
         console: Optional[Console] = None
     ):
         """Initialize the agent.
@@ -72,11 +73,13 @@ class Agent:
             controller: AndroidController for device interaction.
             model: LiteLLM model identifier (e.g., "gpt-4o", "claude-sonnet-4-20250514").
             max_iterations: Maximum number of observe-think-act cycles.
+            max_images: Maximum number of images to keep in history.
             console: Rich console for output (creates one if not provided).
         """
         self.controller = controller
         self.model = model
         self.max_iterations = max_iterations
+        self.max_images = max_images
         self.console = console or Console()
         self.tool_executor = ToolExecutor(controller)
         self.message_history: list[dict[str, Any]] = []
@@ -158,11 +161,10 @@ class Agent:
         # Convert gridded image to data URL
         data_url = image_to_data_url(gridded, format="PNG")
         
-        self.console.print(Panel(
+        self.console.print(Panel.fit(
             f"[dim]Screen: {original_size[0]}x{original_size[1]} → {resized_size[0]}x{resized_size[1]} | Grid: {grid_cols}x{grid_rows}[/dim]",
-            title="[yellow]👁️ Observation[/yellow]",
-            border_style="yellow",
-            expand=False
+            title="Observation",
+            border_style="yellow"
         ))
         
         return {
@@ -266,7 +268,7 @@ class Agent:
             except Exception:
                 raise
     
-    def _manage_history(self, max_images: int = 5) -> None:
+    def _manage_history(self) -> None:
         """Limit the number of images in the message history.
         
         Groq and some other providers have limits on the number of images per request.
@@ -280,7 +282,7 @@ class Agent:
                 has_image = any(item.get("type") == "image_url" for item in msg["content"])
                 if has_image:
                     image_count += 1
-                    if image_count > max_images:
+                    if image_count > self.max_images:
                         # Convert to text-only
                         text_parts = [
                             item["text"] for item in msg["content"] 
