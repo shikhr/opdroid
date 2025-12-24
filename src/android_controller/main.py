@@ -1,0 +1,217 @@
+"""Typer CLI application for android-use."""
+
+import os
+from typing import Optional
+
+import typer
+from dotenv import load_dotenv
+from rich.console import Console
+from rich.panel import Panel
+
+from android_controller.client import AndroidController
+from android_controller.agent import Agent
+
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Create Typer app
+app = typer.Typer(
+    name="android-use",
+    help="🤖 LLM-controlled Android device automation via ADB",
+    add_completion=False,
+    rich_markup_mode="rich"
+)
+
+console = Console()
+
+
+@app.callback(invoke_without_command=True)
+def main(
+    ctx: typer.Context,
+    model: str = typer.Option(
+        None,
+        "--model", "-m",
+        help="LiteLLM model to use (default: gpt-4o or MODEL env var)"
+    ),
+    serial: Optional[str] = typer.Option(
+        None,
+        "--serial", "-s",
+        help="Device serial number (auto-detect if not specified)"
+    ),
+    max_iterations: int = typer.Option(
+        50,
+        "--max-iterations", "-n",
+        help="Maximum number of observe-think-act cycles"
+    )
+):
+    """🤖 LLM-controlled Android device automation via ADB.
+    
+    If no command is provided, starts an interactive chat session.
+    """
+    if ctx.invoked_subcommand is not None:
+        return
+
+    # Interactive mode
+    resolved_model = _resolve_model(model)
+
+    console.print(Panel.fit(
+        "[bold blue]🤖 Android-Use (Interactive Mode)[/bold blue]\n"
+        f"[dim]Model: {resolved_model}[/dim]\n"
+        "[dim]Type 'exit' or 'quit' to end session.[/dim]",
+        border_style="blue"
+    ))
+
+    # Check for API key
+    if not (os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY") or os.getenv("GROQ_API_KEY")):
+        console.print(
+            "[bold red]❌ No API key found![/bold red]\n"
+            "Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or GROQ_API_KEY in your environment or .env file."
+        )
+        raise typer.Exit(1)
+
+    try:
+        console.print("[yellow]📱 Connecting to device...[/yellow]")
+        controller = AndroidController(serial=serial)
+        console.print(f"[green]✓ Connected to:[/green] {controller.serial}")
+        
+        width, height = controller.get_screen_size()
+        console.print(f"[dim]  Screen: {width}x{height}[/dim]")
+
+        agent = Agent(
+            controller=controller,
+            model=resolved_model,
+            max_iterations=max_iterations,
+            console=console
+        )
+
+        while True:
+            objective = console.input("\n[bold magenta]User > [/bold magenta]")
+            
+            if objective.lower() in ["exit", "quit", "e", "q"]:
+                console.print("[yellow]Goodbye! 👋[/yellow]")
+                break
+            
+            if not objective.strip():
+                continue
+
+            if objective.lower() == "clear":
+                console.clear()
+                continue
+
+            try:
+                result = agent.run(objective)
+                console.print(Panel.fit(
+                    f"[bold green]✅ Result:[/bold green]\n{result}",
+                    border_style="green"
+                ))
+            except Exception as e:
+                console.print(f"[bold red]❌ Error during task:[/bold red] {e}")
+
+    except RuntimeError as e:
+        console.print(f"[bold red]❌ Device Error:[/bold red] {e}")
+        raise typer.Exit(1)
+    except KeyboardInterrupt:
+        console.print("\n[yellow]⚠️ Session ended by user[/yellow]")
+        raise typer.Exit(0)
+
+
+@app.command()
+def run(
+    objective: str = typer.Argument(
+        ...,
+        help="The task to accomplish (e.g., 'Open YouTube and search for cats')"
+    ),
+    model: str = typer.Option(
+        None,
+        "--model", "-m",
+        help="LiteLLM model to use (default: gpt-4o or MODEL env var)"
+    ),
+    serial: Optional[str] = typer.Option(
+        None,
+        "--serial", "-s",
+        help="Device serial number (auto-detect if not specified)"
+    ),
+    max_iterations: int = typer.Option(
+        50,
+        "--max-iterations", "-n",
+        help="Maximum number of observe-think-act cycles"
+    )
+) -> None:
+    """Run a single objective without interactive mode."""
+    resolved_model = _resolve_model(model)
+
+    try:
+        controller = AndroidController(serial=serial)
+        agent = Agent(
+            controller=controller,
+            model=resolved_model,
+            max_iterations=max_iterations,
+            console=console
+        )
+        agent.run(objective)
+    except Exception as e:
+        console.print(f"[bold red]❌ Error:[/bold red] {e}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def devices() -> None:
+    """List connected Android devices."""
+    from adbutils import AdbClient
+    
+    client = AdbClient(host="127.0.0.1", port=5037)
+    device_list = client.device_list()
+    
+    if not device_list:
+        console.print("[yellow]No devices connected.[/yellow]")
+        console.print("[dim]Make sure ADB is running: adb start-server[/dim]")
+        return
+    
+    console.print("[bold]Connected devices:[/bold]\n")
+    for device in device_list:
+        console.print(f"  📱 {device.serial}")
+
+
+@app.command()
+def screenshot(
+    output: str = typer.Option(
+        "screenshot.png",
+        "--output", "-o",
+        help="Output file path"
+    ),
+    serial: Optional[str] = typer.Option(
+        None,
+        "--serial", "-s",
+        help="Device serial number"
+    )
+) -> None:
+    """Capture a screenshot from the device."""
+    try:
+        controller = AndroidController(serial=serial)
+        img = controller.get_screenshot()
+        img.save(output)
+        console.print(f"[green]✓ Screenshot saved to:[/green] {output}")
+    except Exception as e:
+        console.print(f"[bold red]❌ Error:[/bold red] {e}")
+        raise typer.Exit(1)
+
+
+def _resolve_model(model: Optional[str]) -> str:
+    """Resolve the model from args, env, or default."""
+    if model:
+        return model
+    
+    env_model = os.getenv("MODEL")
+    if env_model:
+        return env_model
+        
+    # Default for Groq-only environment
+    if os.getenv("GROQ_API_KEY") and not os.getenv("OPENAI_API_KEY") and not os.getenv("ANTHROPIC_API_KEY"):
+        return "groq/llama-3.2-90b-vision-preview"
+        
+    return "gpt-4o"
+
+
+if __name__ == "__main__":
+    app()
