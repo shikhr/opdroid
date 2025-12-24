@@ -1,6 +1,6 @@
 [project]
 name = "opdroid"
-version = "0.1.3"
+version = "0.1.4"
 description = "LLM-controlled Android device automation via ADB"
 readme = "README.md"
 license = "MIT"

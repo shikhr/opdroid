@@ -113,53 +113,6 @@ def main(
         raise typer.Exit(0)
 
 
-@app.command()
-def run(
-    objective: str = typer.Argument(
-        ...,
-        help="The task to accomplish (e.g., 'Open YouTube and search for cats')"
-    ),
-    model: str = typer.Option(
-        None,
-        "--model", "-m",
-        help="LiteLLM model to use (default: gpt-4o or MODEL env var)"
-    ),
-    serial: Optional[str] = typer.Option(
-        None,
-        "--serial", "-s",
-        help="Device serial number (auto-detect if not specified)"
-    ),
-    max_iterations: int = typer.Option(
-        50,
-        "--max-iterations", "-n",
-        help="Maximum number of observe-think-act cycles"
-    ),
-    max_images: int = typer.Option(
-        5,
-        "--max-images", "-i",
-        help="Maximum number of images to keep in context history"
-    )
-) -> None:
-    """Run a single objective without interactive mode."""
-    # Load .env from current working directory
-    load_dotenv()
-    
-    resolved_model = _resolve_model(model)
-
-    try:
-        controller = AndroidController(serial=serial)
-        agent = Agent(
-            controller=controller,
-            model=resolved_model,
-            max_iterations=max_iterations,
-            max_images=max_images,
-            console=console
-        )
-        agent.run(objective)
-    except Exception as e:
-        console.print(f"[bold red]❌ Error:[/bold red] {e}")
-        raise typer.Exit(1)
-
 
 @app.command()
 def devices() -> None:
