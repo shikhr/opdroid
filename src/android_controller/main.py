@@ -11,10 +11,6 @@ from rich.panel import Panel
 from android_controller.client import AndroidController
 from android_controller.agent import Agent
 
-
-# Load environment variables from .env file
-load_dotenv()
-
 # Create Typer app
 app = typer.Typer(
     name="opdroid",
@@ -56,6 +52,9 @@ def main(
     """
     if ctx.invoked_subcommand is not None:
         return
+
+    # Load .env from current working directory
+    load_dotenv()
 
     # Interactive mode
     resolved_model = _resolve_model(model)
@@ -142,6 +141,9 @@ def run(
     )
 ) -> None:
     """Run a single objective without interactive mode."""
+    # Load .env from current working directory
+    load_dotenv()
+    
     resolved_model = _resolve_model(model)
 
     try:
