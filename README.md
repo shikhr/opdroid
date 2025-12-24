@@ -1,4 +1,4 @@
-# android-use
+# opdroid
 
 LLM-controlled Android device automation via ADB. Give natural language commands and watch an AI agent operate your Android device.
 
@@ -23,15 +23,13 @@ The grid system significantly improves accuracy compared to having the LLM guess
 ## Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/android-use.git
-cd android-use
+# Install from PyPI
+pip install opdroid
 
-# Install with uv (recommended)
+# Or clone and install locally
+git clone https://github.com/shikhr/opdroid.git
+cd opdroid
 uv sync
-
-# Or with pip
-pip install -e .
 ```
 
 ## Configuration
@@ -54,15 +52,15 @@ GEMINI_API_KEY=...
 ## Usage
 
 ```bash
-# Using uv
-uv run python -m android_controller "Open Settings and turn on WiFi"
-
-# Or if installed
-android-use "Open YouTube and search for cats"
+# Basic usage
+opdroid "Open Settings and turn on WiFi"
 
 # Specify a different model
-uv run python -m android_controller --model "groq/llama-3.3-70b-versatile" "Open Chrome"
-uv run python -m android_controller --model "gemini/gemini-2.0-flash" "Take a screenshot"
+opdroid --model "groq/llama-3.3-70b-versatile" "Open Chrome"
+opdroid --model "gemini/gemini-2.0-flash" "Open YouTube and search for cats"
+
+# Using as a module
+uv run python -m android_controller "Open Settings"
 ```
 
 ### Available Tools
