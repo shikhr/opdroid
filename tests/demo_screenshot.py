@@ -143,9 +143,9 @@ def main():
     print(f"\n📍 Example: Cell '{demo_cell}' → resized ({px}, {py}) → original ({orig_x}, {orig_y})")
     
     # Save all versions
-    original_path = Path("screenshot_original.png")
-    resized_path = Path("screenshot_resized.png")
-    gridded_path = Path("screenshot_gridded.png")
+    original_path = Path("artifacts/screenshot_original.png")
+    resized_path = Path("artifacts/screenshot_resized.png")
+    gridded_path = Path("artifacts/screenshot_gridded.png")
     
     screenshot.save(original_path)
     resized.save(resized_path)
