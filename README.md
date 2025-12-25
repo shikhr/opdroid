@@ -52,15 +52,30 @@ GEMINI_API_KEY=...
 ## Usage
 
 ```bash
-# Basic usage
-opdroid "Open Settings and turn on WiFi"
+# Start interactive mode (default)
+opdroid
 
 # Specify a different model
-opdroid --model "groq/llama-3.3-70b-versatile" "Open Chrome"
-opdroid --model "gemini/gemini-2.0-flash" "Open YouTube and search for cats"
+opdroid --model "groq/llama-3.3-70b-versatile"
+opdroid --model "gemini/gemini-2.0-flash"
 
-# Using as a module
-uv run python -m android_controller "Open Settings"
+# Limit image history (useful for rate-limited providers)
+opdroid --max-images 3
+
+# List connected devices
+opdroid devices
+
+# Capture a screenshot
+opdroid screenshot -o screen.png
+```
+
+In interactive mode, type your objectives and the agent will execute them:
+
+```
+User > Open YouTube and search for cats
+🎯 Objective: Open YouTube and search for cats
+─── Iteration 1/50 ───
+...
 ```
 
 ### Available Tools

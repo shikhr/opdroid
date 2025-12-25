@@ -32,9 +32,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/shikhr/android-use"
-Repository = "https://github.com/shikhr/android-use"
-Issues = "https://github.com/shikhr/android-use/issues"
+Homepage = "https://github.com/shikhr/opdroid"
+Repository = "https://github.com/shikhr/opdroid"
+Issues = "https://github.com/shikhr/opdroid/issues"
 
 [build-system]
 requires = ["hatchling"]

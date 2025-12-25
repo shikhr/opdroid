@@ -3,13 +3,17 @@
 import os
 from typing import Optional
 
+# Load .env FIRST, before any imports that might read API keys
+from dotenv import load_dotenv, find_dotenv
+
 import typer
-from dotenv import load_dotenv
 from rich.console import Console
 from rich.panel import Panel
 
 from android_controller.client import AndroidController
 from android_controller.agent import Agent
+
+load_dotenv(find_dotenv(usecwd=True))
 
 # Create Typer app
 app = typer.Typer(
@@ -52,9 +56,6 @@ def main(
     """
     if ctx.invoked_subcommand is not None:
         return
-
-    # Load .env from current working directory
-    load_dotenv()
 
     # Interactive mode
     resolved_model = _resolve_model(model)
