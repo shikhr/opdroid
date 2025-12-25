@@ -149,7 +149,7 @@ class Agent:
         screenshot = self.controller.get_screenshot()
         
         # Resize for efficiency (max 800px on longest edge for better grid visibility)
-        resized = resize_image(screenshot, max_size=800)
+        resized = resize_image(screenshot, max_size=1024)
         
         # Overlay grid on the resized image
         gridded, grid_cols, grid_rows = overlay_grid(resized)
@@ -218,7 +218,7 @@ class Agent:
         for attempt in range(max_retries + 1):
             try:
                 # Rate limit mitigation: wait 1 second before each request
-                time.sleep(1)
+                time.sleep(2)
                 
                 # Limit image history to avoid 5-image limit on Groq
                 self._manage_history()

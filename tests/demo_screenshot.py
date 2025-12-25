@@ -122,7 +122,7 @@ def main():
     print(f"   Original: {original_size[0]}x{original_size[1]}")
     
     # Resize exactly like the agent does
-    resized = resize_image(screenshot, max_size=800)
+    resized = resize_image(screenshot, max_size=1024)
     resized_size = resized.size
     
     print(f"   Resized:  {resized_size[0]}x{resized_size[1]}")
