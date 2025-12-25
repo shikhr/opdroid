@@ -4,8 +4,7 @@ LLM-controlled Android device automation via ADB. Give natural language commands
 
 
 
-https://github.com/user-attachments/assets/1d414e3c-5a22-445c-9932-fa70a6a62bd2
-
+https://github.com/user-attachments/assets/89ee92fe-2501-447e-9c8e-9a3d8f0a7994
 
 
 
