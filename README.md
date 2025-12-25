@@ -2,6 +2,13 @@
 
 LLM-controlled Android device automation via ADB. Give natural language commands and watch an AI agent operate your Android device.
 
+
+
+https://github.com/user-attachments/assets/1d414e3c-5a22-445c-9932-fa70a6a62bd2
+
+
+
+
 ## How It Works
 
 1. Captures a screenshot from your Android device
