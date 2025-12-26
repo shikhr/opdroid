@@ -48,6 +48,11 @@ def main(
         5,
         "--max-images", "-i",
         help="Maximum number of images to keep in context history"
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose", "-v",
+        help="Show detailed output including LLM thoughts"
     )
 ):
     """🤖 LLM-controlled Android device automation via ADB.
@@ -80,7 +85,8 @@ def main(
             model=resolved_model,
             max_iterations=max_iterations,
             max_images=max_images,
-            console=console
+            console=console,
+            verbose=verbose
         )
 
         while True:

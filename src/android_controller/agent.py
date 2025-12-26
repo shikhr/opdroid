@@ -73,7 +73,8 @@ class Agent:
         model: str = "gpt-4o",
         max_iterations: int = 50,
         max_images: int = 5,
-        console: Optional[Console] = None
+        console: Optional[Console] = None,
+        verbose: bool = False
     ):
         """Initialize the agent.
         
@@ -83,12 +84,14 @@ class Agent:
             max_iterations: Maximum number of observe-think-act cycles.
             max_images: Maximum number of images to keep in history.
             console: Rich console for output (creates one if not provided).
+            verbose: If True, show full output including thoughts. If False, minimal output.
         """
         self.controller = controller
         self.model = model
         self.max_iterations = max_iterations
         self.max_images = max_images
         self.console = console or Console()
+        self.verbose = verbose
         self.tool_executor = ToolExecutor(controller)
         self.message_history: list[dict[str, Any]] = []
         self._task_finished = False
@@ -175,14 +178,15 @@ class Agent:
             xml_raw = self.controller.get_ui_hierarchy()
             ui_hierarchy = parse_ui_hierarchy(xml_raw, original_size, resized_size)
         except Exception as e:
-            self.console.print(f"[dim]UI hierarchy unavailable: {e}[/dim]")
+            if self.verbose:
+                self.console.print(f"[dim]UI hierarchy unavailable: {e}[/dim]")
         
-        status = f"[dim]Screen: {original_size[0]}x{original_size[1]} -> {resized_size[0]}x{resized_size[1]} | Grid: {grid_cols}x{grid_rows}"
-        if ui_hierarchy:
-            status += " | UI tree: yes"
-        status += "[/dim]"
-        
-        self.console.print(Panel.fit(status, title="Observation", border_style="yellow"))
+        if self.verbose:
+            status = f"[dim]Screen: {original_size[0]}x{original_size[1]} -> {resized_size[0]}x{resized_size[1]} | Grid: {grid_cols}x{grid_rows}"
+            if ui_hierarchy:
+                status += " | UI tree: yes"
+            status += "[/dim]"
+            self.console.print(Panel.fit(status, title="Observation", border_style="yellow"))
         
         return {
             "data_url": data_url,
@@ -258,9 +262,9 @@ class Agent:
                         tool_choice="auto"
                     )
                 
-                # Log thinking
+                # Log thinking (only in verbose mode)
                 assistant_message = response.choices[0].message
-                if assistant_message.content:
+                if assistant_message.content and self.verbose:
                     self.console.print(Panel(
                         f"[cyan]{assistant_message.content}[/cyan]",
                         title="[cyan]🧠 Thought[/cyan]",
@@ -388,8 +392,19 @@ class Agent:
             
             action_results.append(action_line)
         
-        self.console.print(Panel(
-            Group(*action_results),
-            title="[green]🔧 Actions[/green]",
-            border_style="green"
-        ))
+        if self.verbose:
+            self.console.print(Panel(
+                Group(*action_results),
+                title="[green]🔧 Actions[/green]",
+                border_style="green"
+            ))
+        else:
+            # Minimal output: just show tool names and results inline
+            for tool_call in tool_calls:
+                tool_name = tool_call.function.name
+                try:
+                    args = json.loads(tool_call.function.arguments)
+                except json.JSONDecodeError:
+                    args = {}
+                args_str = ", ".join(f"{k}={v!r}" for k, v in args.items())
+                self.console.print(f"  [green]→[/green] {tool_name}({args_str})")
