@@ -163,6 +163,77 @@ def screenshot(
         raise typer.Exit(1)
 
 
+@app.command()
+def control(
+    command: str = typer.Argument(
+        ...,
+        help="Tool command to execute, e.g., tap(cell=\"E10\") or press_back()"
+    ),
+    serial: Optional[str] = typer.Option(
+        None,
+        "--serial", "-s",
+        help="Device serial number"
+    )
+) -> None:
+    """Execute a tool command directly on the device.
+    
+    Examples:
+        opdroid control 'tap(cell="E10")'
+        opdroid control 'swipe(start_cell="F20", end_cell="F5")'
+        opdroid control 'press_back()'
+        opdroid control 'input_text(text="hello")'
+        opdroid control 'tap_sequence(cells=["B16", "E16", "H16"])'
+    """
+    import re
+    import ast
+    from android_controller.tools import ToolExecutor
+    
+    # Parse command: name(args)
+    match = re.match(r'(\w+)\((.*)\)$', command.strip(), re.DOTALL)
+    if not match:
+        console.print(f"[bold red]❌ Invalid command format:[/bold red] {command}")
+        console.print("[dim]Expected format: command_name(arg1=value1, arg2=value2)[/dim]")
+        raise typer.Exit(1)
+    
+    tool_name = match.group(1)
+    args_str = match.group(2).strip()
+    
+    # Parse arguments
+    arguments = {}
+    if args_str:
+        try:
+            # Parse as Python dict literal
+            arguments = ast.literal_eval(f"{{{args_str}}}")
+        except (ValueError, SyntaxError):
+            # Try parsing as keyword arguments
+            try:
+                # Convert key=value pairs to dict
+                for arg in re.findall(r'(\w+)\s*=\s*([^,]+(?:,\s*[^,]+)*|\[[^\]]*\]|"[^"]*"|\'[^\']*\'|\d+)', args_str):
+                    key, value = arg
+                    arguments[key] = ast.literal_eval(value)
+            except Exception as e:
+                console.print(f"[bold red]❌ Failed to parse arguments:[/bold red] {e}")
+                raise typer.Exit(1)
+    
+    try:
+        controller = AndroidController(serial=serial)
+        executor = ToolExecutor(controller)
+        
+        # Set screen size for coordinate conversion
+        executor.original_size = controller.get_screen_size()
+        executor.resized_size = (460, 1024)  # Default resized size
+        
+        result = executor.execute(tool_name, arguments)
+        console.print(f"[green]✓[/green] {result}")
+    except ValueError as e:
+        console.print(f"[bold red]❌ Unknown command:[/bold red] {tool_name}")
+        console.print("[dim]Available: tap, tap_sequence, swipe, input_text, press_home, press_back, press_enter, launch_app, wait[/dim]")
+        raise typer.Exit(1)
+    except Exception as e:
+        console.print(f"[bold red]❌ Error:[/bold red] {e}")
+        raise typer.Exit(1)
+
+
 def _resolve_model(model: Optional[str]) -> str:
     """Resolve the model from args, env, or default."""
     if model:

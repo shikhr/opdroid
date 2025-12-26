@@ -44,8 +44,8 @@ You receive:
 
 ## UI Elements List:
 Each line shows one tappable element:
-{ [Button] desc="Toggle history" id=history_toggle_button position=B2 }
-{ [ImageButton] desc="7" id=digit_7 position=B16 }
+{ [Button] desc="Toggle history" id="history_toggle_button" position="B2" }
+{ [ImageButton] desc="7" id="digit_7" position="B16" }
 
 Use the position value to tap the element.
 
@@ -53,13 +53,18 @@ Use the position value to tap the element.
 1. Find the element you need in the list
 2. Use its position value for tapping
 3. If not in list, visually locate on screenshot
+4. If keyboard is visible, use press_back() to hide it before tapping elements behind it
 
 ## Actions:
 - tap(cell="B16") - Tap a single cell
-- tap_sequence(cells=["E22", "H22", "K16"]) - Tap multiple cells in order (use for calculators, keypads)
+- tap_sequence(cells=["E22", "H22", "K16"]) - Tap multiple cells in order (for calculators, keypads)
 - swipe(start_cell="E15", end_cell="E5") - Scroll up
+- input_text(text="...") - Type text into focused field
+- press_back() - Go back or hide keyboard
+- press_home() - Go to home screen
+- press_enter() - Submit/confirm
+- launch_app(package="com.android.settings") - Launch app directly
 - wait(seconds=2) - Wait for loading
-- input_text(text="...") - Type text
 
 When done, call task_complete. If impossible, call task_impossible."""
 
