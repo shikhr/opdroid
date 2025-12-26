@@ -27,33 +27,41 @@ from android_controller.client import AndroidController
 from android_controller.tools import TOOL_DEFINITIONS, ToolExecutor
 from android_controller.utils import resize_image, image_to_data_url
 from android_controller.grid import overlay_grid
+from android_controller.ui_hierarchy import parse_ui_hierarchy
 
 
 # Default system prompt for the Android operator agent
 SYSTEM_PROMPT = """You are an expert Android device operator. Your task is to control an Android device to accomplish user objectives.
 
-You receive screenshots of the device screen overlaid with a labeled grid. The grid has:
-- COLUMNS labeled with letters (A, B, C, ...) from left to right
-- ROWS labeled with numbers (1, 2, 3, ...) from top to bottom
+You receive:
+1. A screenshot with a labeled grid overlay
+2. A list of interactive UI elements with their tap positions
 
-The exact number of columns and rows will be shown with each screenshot.
+## Grid System:
+- COLUMNS: letters (A, B, C, ...) from left to right
+- ROWS: numbers (1, 2, 3, ...) from top to bottom
+- Cell format: "E10" means column E, row 10
 
-To interact with the screen, specify grid cells like 'E10' (column E, row 10).
+## UI Elements List:
+Each line shows one tappable element:
+{ [Button] desc="Toggle history" id=history_toggle_button position=B2 }
+{ [ImageButton] desc="7" id=digit_7 position=B16 }
 
-## How to think step-by-step:
-1. Analyze the current screen state from the screenshot
-2. Identify which grid cell contains the UI element you need to interact with
-3. Choose the appropriate action using grid cell references
+Use the position value to tap the element.
 
-## IMPORTANT GUIDELINES:
-- Use tap(cell="E10") to tap on a specific grid cell
-- Use swipe(start_cell="E15", end_cell="E5") to scroll (swipe up to scroll down)
-- Wait for content to load after navigating (use wait tool)
-- If you need to type, first tap the input field to focus it
-- Look at the grid labels on the screenshot to identify the correct cell
+## How to act:
+1. Find the element you need in the list
+2. Use its position value for tapping
+3. If not in list, visually locate on screenshot
 
-When the task is complete, call the task_complete tool with a summary.
-If the task is impossible, call the task_impossible tool with an explanation."""
+## Actions:
+- tap(cell="B16") - Tap a single cell
+- tap_sequence(cells=["E22", "H22", "K16"]) - Tap multiple cells in order (use for calculators, keypads)
+- swipe(start_cell="E15", end_cell="E5") - Scroll up
+- wait(seconds=2) - Wait for loading
+- input_text(text="...") - Type text
+
+When done, call task_complete. If impossible, call task_impossible."""
 
 
 class Agent:
@@ -141,14 +149,14 @@ class Agent:
         return final_msg
     
     def _observe(self) -> dict[str, Any]:
-        """Capture the current screen state with grid overlay.
+        """Capture the current screen state with grid overlay and UI hierarchy.
         
         Returns:
-            Dict with screenshot data URL and screen dimensions.
+            Dict with screenshot data URL, screen dimensions, and UI hierarchy.
         """
         screenshot = self.controller.get_screenshot()
         
-        # Resize for efficiency (max 800px on longest edge for better grid visibility)
+        # Resize for efficiency (max 1024px on longest edge for better grid visibility)
         resized = resize_image(screenshot, max_size=1024)
         
         # Overlay grid on the resized image
@@ -161,18 +169,28 @@ class Agent:
         # Convert gridded image to data URL
         data_url = image_to_data_url(gridded, format="PNG")
         
-        self.console.print(Panel.fit(
-            f"[dim]Screen: {original_size[0]}x{original_size[1]} → {resized_size[0]}x{resized_size[1]} | Grid: {grid_cols}x{grid_rows}[/dim]",
-            title="Observation",
-            border_style="yellow"
-        ))
+        # Capture UI hierarchy (if available)
+        ui_hierarchy = None
+        try:
+            xml_raw = self.controller.get_ui_hierarchy()
+            ui_hierarchy = parse_ui_hierarchy(xml_raw, original_size, resized_size)
+        except Exception as e:
+            self.console.print(f"[dim]UI hierarchy unavailable: {e}[/dim]")
+        
+        status = f"[dim]Screen: {original_size[0]}x{original_size[1]} -> {resized_size[0]}x{resized_size[1]} | Grid: {grid_cols}x{grid_rows}"
+        if ui_hierarchy:
+            status += " | UI tree: yes"
+        status += "[/dim]"
+        
+        self.console.print(Panel.fit(status, title="Observation", border_style="yellow"))
         
         return {
             "data_url": data_url,
             "original_size": original_size,
             "resized_size": resized_size,
             "grid_cols": grid_cols,
-            "grid_rows": grid_rows
+            "grid_rows": grid_rows,
+            "ui_hierarchy": ui_hierarchy
         }
     
     def _think(self, observation: dict[str, Any]) -> Any:
@@ -189,16 +207,24 @@ class Agent:
         grid_rows = observation["grid_rows"]
         last_col_letter = chr(ord('A') + grid_cols - 1) if grid_cols <= 26 else 'Z+'
         
+        # Build text description with optional UI hierarchy
+        text_parts = [
+            f"Current screen with {grid_cols}x{grid_rows} grid "
+            f"(columns A-{last_col_letter}, rows 1-{grid_rows})."
+        ]
+        
+        ui_hierarchy = observation.get("ui_hierarchy")
+        if ui_hierarchy:
+            text_parts.append(f"\n\nUI Hierarchy:\n```\n{ui_hierarchy}\n```")
+        
+        text_parts.append("\nWhat action should I take next?")
+        
         vision_message = {
             "role": "user",
             "content": [
                 {
                     "type": "text",
-                    "text": (
-                        f"Current screen with {grid_cols}x{grid_rows} grid "
-                        f"(columns A-{last_col_letter}, rows 1-{grid_rows}). "
-                        f"What action should I take next?"
-                    )
+                    "text": "".join(text_parts)
                 },
                 {
                     "type": "image_url",
@@ -272,7 +298,8 @@ class Agent:
         """Limit the number of images in the message history.
         
         Groq and some other providers have limits on the number of images per request.
-        This method converts older vision messages to text-only descriptions.
+        This method converts older vision messages to text-only descriptions,
+        and strips UI hierarchy from all but the most recent message.
         """
         image_count = 0
         # Iterate backwards to keep the most recent images
@@ -283,12 +310,23 @@ class Agent:
                 if has_image:
                     image_count += 1
                     if image_count > self.max_images:
-                        # Convert to text-only
-                        text_parts = [
-                            item["text"] for item in msg["content"] 
-                            if item.get("type") == "text"
-                        ]
+                        # Convert to text-only, stripping UI hierarchy
+                        text_parts = []
+                        for item in msg["content"]:
+                            if item.get("type") == "text":
+                                text = item["text"]
+                                # Strip UI hierarchy block from older messages
+                                if "UI Hierarchy:" in text:
+                                    # Keep only the first line (grid info)
+                                    text = text.split("\n\nUI Hierarchy:")[0]
+                                text_parts.append(text)
                         msg["content"] = " ".join(text_parts) + " [Screenshot removed for history management]"
+                    elif image_count > 1:
+                        # For messages still with images but not the most recent,
+                        # strip UI hierarchy to save tokens
+                        for item in msg["content"]:
+                            if item.get("type") == "text" and "UI Hierarchy:" in item["text"]:
+                                item["text"] = item["text"].split("\n\nUI Hierarchy:")[0] + "\n[UI hierarchy removed from history]"
     
     def _act(self, response: Any, observation: dict[str, Any]) -> None:
         """Execute tool calls from the LLM response.

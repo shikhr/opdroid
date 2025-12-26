@@ -106,3 +106,23 @@ def grid_cell_to_pixels(cell: str, cell_size: int = CELL_SIZE) -> tuple[int, int
     y = int((row_idx + 0.5) * cell_size)
     
     return x, y
+
+
+def pixels_to_grid_cell(x: int, y: int, cell_size: int = CELL_SIZE) -> str:
+    """Convert pixel coordinates to a grid cell label.
+    
+    Args:
+        x: X coordinate in pixels
+        y: Y coordinate in pixels
+        cell_size: Size of each square cell in pixels
+    
+    Returns:
+        Grid cell label like 'A1', 'E10', etc.
+    """
+    col_idx = x // cell_size
+    row_idx = y // cell_size
+    
+    col_label = get_column_label(col_idx)
+    row_label = str(row_idx + 1)  # 1-indexed
+    
+    return f"{col_label}{row_label}"

@@ -12,12 +12,13 @@ https://github.com/user-attachments/assets/89ee92fe-2501-447e-9c8e-9a3d8f0a7994
 
 1. Captures a screenshot from your Android device
 2. Overlays a labeled grid (columns A-Z, rows 1-N) on the screenshot
-3. Sends the gridded image to an LLM with your objective
-4. LLM responds with grid-based actions like `tap(cell="E10")`
-5. Actions are converted to device coordinates and executed via ADB
-6. Repeat until task is complete
+3. Extracts UI hierarchy with element positions for precise tapping
+4. Sends the gridded image + UI elements list to an LLM with your objective
+5. LLM responds with grid-based actions like `tap(cell="E10")`
+6. Actions are converted to device coordinates and executed via ADB
+7. Repeat until task is complete
 
-The grid system significantly improves accuracy compared to having the LLM guess raw pixel coordinates.
+The grid system + UI hierarchy significantly improves accuracy compared to having the LLM guess raw pixel coordinates.
 
 ## Requirements
 
@@ -91,6 +92,7 @@ The agent can use these actions:
 | Tool | Description |
 |------|-------------|
 | `tap(cell)` | Tap on a grid cell (e.g., "E10") |
+| `tap_sequence(cells)` | Tap multiple cells in order (for calculators, keypads) |
 | `swipe(start_cell, end_cell)` | Swipe between cells for scrolling |
 | `input_text(text)` | Type text into focused field |
 | `press_home()` | Press the home button |

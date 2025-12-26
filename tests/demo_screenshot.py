@@ -11,6 +11,7 @@ from PIL import ImageDraw, ImageFont
 
 from android_controller.client import AndroidController
 from android_controller.utils import resize_image
+from android_controller.ui_hierarchy import parse_ui_hierarchy
 
 
 # Grid configuration - square cells
@@ -142,6 +143,29 @@ def main():
     orig_y = int(py * original_size[1] / resized_size[1])
     print(f"\n📍 Example: Cell '{demo_cell}' → resized ({px}, {py}) → original ({orig_x}, {orig_y})")
     
+    # Capture and parse UI hierarchy
+    print("\n🌲 Capturing UI hierarchy...")
+    try:
+        xml_raw = controller.get_ui_hierarchy()
+        ui_hierarchy = parse_ui_hierarchy(xml_raw, original_size, resized_size)
+        print("\n" + "=" * 60)
+        print("UI HIERARCHY (minified with grid cells)")
+        print("=" * 60)
+        print(ui_hierarchy)
+        print("=" * 60)
+        
+        # Save raw XML for reference
+        xml_path = Path("artifacts/ui_hierarchy.xml")
+        xml_path.write_text(xml_raw)
+        print(f"\n📄 Raw XML saved: {xml_path.absolute()}")
+        
+        # Save minified version
+        minified_path = Path("artifacts/ui_hierarchy_minified.txt")
+        minified_path.write_text(ui_hierarchy)
+        print(f"📄 Minified saved: {minified_path.absolute()}")
+    except Exception as e:
+        print(f"⚠️  Could not capture UI hierarchy: {e}")
+    
     # Save all versions
     original_path = Path("artifacts/screenshot_original.png")
     resized_path = Path("artifacts/screenshot_resized.png")
@@ -159,3 +183,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

@@ -206,3 +206,23 @@ class AndroidController:
             f"monkey -p {package} -c android.intent.category.LAUNCHER 1"
         )
         return f"Launched app: {package}"
+    
+    def get_ui_hierarchy(self) -> str:
+        """Dump the UI hierarchy XML from the device.
+        
+        Uses uiautomator to capture the current UI tree structure.
+        
+        Returns:
+            Raw XML string of the UI hierarchy.
+        """
+        # Dump directly to stdout to avoid file permission issues
+        output = self.device.shell("uiautomator dump /dev/tty")
+        
+        # Extract only the XML part (between <?xml ... </hierarchy>)
+        xml_start = output.find("<?xml")
+        xml_end = output.find("</hierarchy>")
+        
+        if xml_start != -1 and xml_end != -1:
+            output = output[xml_start:xml_end + len("</hierarchy>")]
+        
+        return output.strip()

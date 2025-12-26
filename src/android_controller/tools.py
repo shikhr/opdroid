@@ -34,6 +34,32 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
         "type": "function",
         "function": {
+            "name": "tap_sequence",
+            "description": (
+                "Taps multiple grid cells in sequence. Use this when you need to tap several buttons on the same screen. "
+                "This is more efficient than calling tap() multiple times."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "cells": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of grid cells to tap in order (e.g., ['B22', 'E22', 'K16', 'B22'])"
+                    },
+                    "delay_ms": {
+                        "type": "number",
+                        "description": "Delay between taps in milliseconds (default: 500)",
+                        "default": 500
+                    }
+                },
+                "required": ["cells"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "swipe",
             "description": (
                 "Simulates a swipe gesture from one grid cell to another. "
@@ -236,6 +262,7 @@ class ToolExecutor:
         self.controller = controller
         self._tool_map: dict[str, Callable[..., str]] = {
             "tap": self._tap,
+            "tap_sequence": self._tap_sequence,
             "swipe": self._swipe,
             "input_text": self._input_text,
             "press_home": self._press_home,
@@ -320,6 +347,18 @@ class ToolExecutor:
         """Tap at the center of the specified grid cell."""
         x, y = self._cell_to_device_pixels(cell)
         return self.controller.tap(x, y)
+    
+    def _tap_sequence(self, cells: list[str], delay_ms: float = 500) -> str:
+        """Tap multiple cells in sequence with delay between each."""
+        results = []
+        for i, cell in enumerate(cells):
+            x, y = self._cell_to_device_pixels(cell)
+            self.controller.tap(x, y)
+            results.append(cell)
+            # Add delay between taps (except after last one)
+            if i < len(cells) - 1:
+                time.sleep(delay_ms / 1000)
+        return f"Tapped sequence: {' -> '.join(results)}"
     
     def _swipe(
         self,
