@@ -1,6 +1,6 @@
 [project]
 name = "opdroid"
-version = "0.1.7"
+version = "0.2.0"
 description = "LLM-controlled Android device automation via ADB"
 readme = "README.md"
 license = "MIT"
@@ -29,6 +29,7 @@ dependencies = [
     "rich>=13.0.0",
     "pillow>=10.0.0",
     "python-dotenv>=1.0.0",
+    "mcp>=1.0.0",
 ]
 
 [project.urls]

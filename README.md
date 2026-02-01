@@ -2,11 +2,7 @@
 
 LLM-controlled Android device automation via ADB. Give natural language commands and watch an AI agent operate your Android device.
 
-
-
 https://github.com/user-attachments/assets/89ee92fe-2501-447e-9c8e-9a3d8f0a7994
-
-
 
 ## How It Works
 
@@ -89,19 +85,78 @@ User > Open YouTube and search for cats
 
 The agent can use these actions:
 
-| Tool | Description |
-|------|-------------|
-| `tap(cell)` | Tap on a grid cell (e.g., "E10") |
-| `tap_sequence(cells)` | Tap multiple cells in order (for calculators, keypads) |
-| `swipe(start_cell, end_cell)` | Swipe between cells for scrolling |
-| `input_text(text)` | Type text into focused field |
-| `press_home()` | Press the home button |
-| `press_back()` | Press the back button |
-| `press_enter()` | Press enter/submit |
-| `launch_app(package)` | Launch app by package name |
-| `wait(seconds)` | Wait for content to load |
-| `task_complete(summary)` | Mark task as done |
-| `task_impossible(reason)` | Mark task as impossible |
+| Tool                          | Description                                            |
+| ----------------------------- | ------------------------------------------------------ |
+| `tap(cell)`                   | Tap on a grid cell (e.g., "E10")                       |
+| `tap_sequence(cells)`         | Tap multiple cells in order (for calculators, keypads) |
+| `swipe(start_cell, end_cell)` | Swipe between cells for scrolling                      |
+| `input_text(text)`            | Type text into focused field                           |
+| `press_home()`                | Press the home button                                  |
+| `press_back()`                | Press the back button                                  |
+| `press_enter()`               | Press enter/submit                                     |
+| `launch_app(package)`         | Launch app by package name                             |
+| `wait(seconds)`               | Wait for content to load                               |
+| `task_complete(summary)`      | Mark task as done                                      |
+| `task_impossible(reason)`     | Mark task as impossible                                |
+
+## MCP Server
+
+opdroid can run as an MCP (Model Context Protocol) server, allowing any MCP-compatible LLM client to control your Android device.
+
+```bash
+# Run as MCP server
+opdroid --mcp
+
+# With specific device
+opdroid --mcp --serial <device_serial>
+```
+
+### MCP Client Configuration
+
+Add to your MCP client config (e.g., Claude Desktop, VS Code, etc.):
+
+**Using uv (recommended):**
+
+```json
+{
+  "mcpServers": {
+    "opdroid": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/opdroid", "run", "opdroid", "--mcp"]
+    }
+  }
+}
+```
+
+**If installed globally via `pip install -e .`:**
+
+```json
+{
+  "mcpServers": {
+    "opdroid": {
+      "command": "opdroid",
+      "args": ["--mcp"]
+    }
+  }
+}
+```
+
+### Available MCP Tools
+
+| Tool                | Description                                        |
+| ------------------- | -------------------------------------------------- |
+| `get_screen`        | Capture screenshot with grid overlay + UI elements |
+| `tap`               | Tap on a grid cell                                 |
+| `tap_sequence`      | Tap multiple cells in sequence                     |
+| `swipe`             | Swipe between two cells                            |
+| `input_text`        | Type text into focused field                       |
+| `press_home`        | Press home button                                  |
+| `press_back`        | Press back button                                  |
+| `press_enter`       | Press enter key                                    |
+| `press_recent_apps` | Show recent apps                                   |
+| `launch_app`        | Launch app by package name                         |
+| `wait`              | Wait for specified seconds                         |
+| `list_devices`      | List connected Android devices                     |
 
 ## Demo
 
@@ -116,10 +171,12 @@ This saves `screenshot_gridded.png` showing the labeled grid overlay.
 ## Supported Models
 
 Any model supported by [LiteLLM](https://docs.litellm.ai/docs/providers) that has:
+
 - Vision capability (to understand screenshots)
 - Function/tool calling (to execute actions)
 
 Tested with:
+
 - `gpt-4o` (OpenAI)
 - `claude-sonnet-4-20250514` (Anthropic)
 - `gemini/gemini-2.0-flash` (Google)
